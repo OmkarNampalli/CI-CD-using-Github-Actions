@@ -1,0 +1,56 @@
+name: ci pipeline to build and push image
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOCKER_REGISTRY: docker.io
+  IMAGE_REPOSITORY: ${{ secrets.IMAGE_NAME }}
+  IMAGE_TAG: ${{ github.sha }}
+  
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: CheckOut code
+        uses: actions/checkout@v4
+
+      - name: Set up node
+        uses: actions/setup-node@v4
+
+      - name: install Dependencies
+        run: npm install
+
+      - name: Test the apllication / Run tests
+        run: npm test
+
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+      
+      - name: CheckOut code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build docker image
+        run: docker build -t ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+
+      - name: Push Docker Image
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+        
+      # 5. Push a 'latest' tag for convenience (optional)
+      - name: Push 'latest' Tag
+        run: |
+          docker tag ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ env.IMAGE_REPOSITORY }}:latest
+          docker push ${{ env.IMAGE_REPOSITORY }}:latest
+
